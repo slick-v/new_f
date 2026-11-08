@@ -1,97 +1,102 @@
 import json
 import logging
-import time
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from groq import APIError, RateLimitError
 
-from app import config, db
-from app.auth import require_api_key
-from app.llm import build_messages, client, usage_stats
-from app.schemas import ChatRequest
+from app.database import SessionLocal
+from app.deps import LLMDep, RepoDep, SettingsDep, rate_limit,require_api_key
+from app.llm import LLMError, LLMRateLimitError
+from app.repository import ChatRepository
+from app.schemas import (
+    ChatRequest,
+    ChatResponse,
+    ConversationResponse,
+    MessageOut,
+    UsageStats,
+)
 
 logger = logging.getLogger(__name__)
-router = APIRouter(dependencies=[Depends(require_api_key)])
+router = APIRouter(dependencies=[Depends(rate_limit)])
 
 
-def resolve_conversation(conversation_id: str | None) -> str:
+async def resolve_conversation(repo: ChatRepository, conversation_id: uuid.UUID | None) -> uuid.UUID:
     if conversation_id is None:
-        return db.create_conversation()
-    if not db.conversation_exists(conversation_id):
+        return await repo.create_conversation()
+    if not await repo.conversation_exists(conversation_id):
         raise HTTPException(status_code=404, detail="Conversation not found")
     return conversation_id
 
 
-@router.post("/chat")
-async def chat(req: ChatRequest):
-    conversation_id = resolve_conversation(req.conversation_id)
-    messages = build_messages(conversation_id, req.message)
+@router.post("/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest, repo: RepoDep, llm: LLMDep, settings: SettingsDep):
+    conversation_id = await resolve_conversation(repo, req.conversation_id)
+    history = await repo.load_history(conversation_id, settings.max_history)
+    messages = llm.build_messages(history, req.message)
 
-    start = time.perf_counter()
     try:
-        response = await client.chat.completions.create(model=config.MODEL, messages=messages)
-    except RateLimitError:
+        reply, stats = await llm.complete(messages)
+    except LLMRateLimitError:
         raise HTTPException(status_code=429, detail="Rate limit hit, try again shortly")
-    except APIError:
-        logger.exception("Groq API error")
+    except LLMError:
+        logger.exception("LLM call failed")
         raise HTTPException(status_code=502, detail="The model service failed, try again")
-    latency_ms = round((time.perf_counter() - start) * 1000)
 
-    reply = response.choices[0].message.content
-    stats = usage_stats(response.usage, latency_ms)
-    db.save_exchange(conversation_id, req.message, reply, stats)
-
-    return {"conversation_id": conversation_id, "reply": reply, "stats": stats}
+    await repo.save_exchange(conversation_id, req.message, reply, stats)
+    return ChatResponse(conversation_id=conversation_id, reply=reply, stats=stats)
 
 
 @router.post("/stream_chat")
-async def stream_chat(req: ChatRequest):
-    conversation_id = resolve_conversation(req.conversation_id)
-    messages = build_messages(conversation_id, req.message)
+async def stream_chat(req: ChatRequest, repo: RepoDep, llm: LLMDep, settings: SettingsDep):
+    conversation_id = await resolve_conversation(repo, req.conversation_id)
+    history = await repo.load_history(conversation_id, settings.max_history)
+    messages = llm.build_messages(history, req.message)
 
     async def generate():
-        start = time.perf_counter()
-        ttft_ms = None
-        usage = None
         reply_parts = []
+        stats = None
 
         try:
-            stream = await client.chat.completions.create(
-                model=config.MODEL, messages=messages, stream=True
-            )
-            async for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    if ttft_ms is None:
-                        ttft_ms = round((time.perf_counter() - start) * 1000)
-                    text = chunk.choices[0].delta.content
-                    reply_parts.append(text)
-                    yield json.dumps({"type": "token", "content": text}) + "\n"
-
-                # Groq puts token usage on the final chunk under x_groq
-                x_groq = getattr(chunk, "x_groq", None)
-                if x_groq and getattr(x_groq, "usage", None):
-                    usage = x_groq.usage
-        except RateLimitError:
+            async for item in llm.stream(messages):
+                if isinstance(item, UsageStats):
+                    stats = item
+                else:
+                    reply_parts.append(item)
+                    yield json.dumps({"type": "token", "content": item}) + "\n"
+        except LLMRateLimitError:
             yield json.dumps({"type": "error", "detail": "Rate limit hit, try again shortly"}) + "\n"
             return
-        except APIError:
-            logger.exception("Groq API error during stream")
+        except LLMError:
+            logger.exception("LLM stream failed")
             yield json.dumps({"type": "error", "detail": "The model service failed, try again"}) + "\n"
             return
 
-        latency_ms = round((time.perf_counter() - start) * 1000)
-        stats = usage_stats(usage, latency_ms, ttft_ms)
-        db.save_exchange(conversation_id, req.message, "".join(reply_parts), stats)
+        # Depending on the FastAPI version, the request's injected session can be
+        # closed before the stream body runs, so save with a fresh session
+        async with SessionLocal() as session:
+            await ChatRepository(session).save_exchange(
+                conversation_id, req.message, "".join(reply_parts), stats
+            )
 
-        yield json.dumps({"type": "stats", "conversation_id": conversation_id, **stats}) + "\n"
+        yield json.dumps({
+            "type": "stats",
+            "conversation_id": str(conversation_id),
+            **stats.model_dump(),
+        }) + "\n"
 
     return StreamingResponse(generate(), media_type="application/x-ndjson")
 
 
-@router.get("/conversations/{conversation_id}")
-async def get_conversation(conversation_id: str):
-    conversation = db.get_conversation(conversation_id)
-    if conversation is None:
+@router.get("/conversations/{conversation_id}", response_model=ConversationResponse)
+async def get_conversation(conversation_id: uuid.UUID, repo: RepoDep):
+    messages = await repo.get_messages(conversation_id)
+    if not messages:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    return conversation
+
+    totals = await repo.get_totals(conversation_id)
+    return ConversationResponse(
+        conversation_id=conversation_id,
+        messages=[MessageOut.model_validate(m) for m in messages],
+        totals=totals,
+    )
