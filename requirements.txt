@@ -4,3 +4,7 @@ groq
 pydantic-settings
 sqlalchemy[asyncio]
 asyncpg
+fastembed
+pypdf
+python-multipart
+pgvector

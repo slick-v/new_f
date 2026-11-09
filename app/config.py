@@ -22,6 +22,18 @@ class Settings(BaseSettings):
     app_env: Literal["dev", "prod"] = "dev"
     rate_limit_per_minute: int = 10
 
+    # RAG
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    embedding_dim: int = 384
+    chunk_size: int = 800
+    chunk_overlap: int = 100
+    search_top_k: int = 5
+    max_upload_mb: int = 10
+
+    @property
+    def max_upload_bytes(self) -> int:
+        return self.max_upload_mb * 1024 * 1024
+
     @property
     def api_keys(self) -> set[str]:
         return {k.strip() for k in self.demo_api_keys.split(",") if k.strip()}

@@ -56,3 +56,42 @@ class ConversationResponse(BaseModel):
     conversation_id: uuid.UUID
     messages: list[MessageOut]
     totals: ConversationTotals
+
+
+
+class DocumentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    filename: str
+    content_type: str
+    size_bytes: int
+    num_pages: int
+    num_chunks: int
+    created_at: datetime
+
+
+class SearchRequest(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"query": "What is the refund policy?"}]}
+    )
+
+    query: str = Field(min_length=1, max_length=1000)
+    top_k: int | None = Field(default=None, ge=1, le=20)
+    document_ids: list[uuid.UUID] | None = None
+
+
+class SearchResult(BaseModel):
+    chunk_id: int
+    document_id: uuid.UUID
+    filename: str
+    page: int | None
+    chunk_index: int
+    content: str
+    score: float
+
+
+class SearchResponse(BaseModel):
+    query: str
+    results: list[SearchResult]
+    retrieval_ms: int

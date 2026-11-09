@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 from app.database import SessionLocal
 from app.deps import LLMDep, RepoDep, SettingsDep, rate_limit,require_api_key
 from app.llm import LLMError, LLMRateLimitError
-from app.repository import ChatRepository
+from app.repositories.chat import ChatRepository
 from app.schemas import (
     ChatRequest,
     ChatResponse,

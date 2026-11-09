@@ -1,12 +1,13 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from sqlalchemy import text
 
+from app.api import chat, documents
 from app.database import engine, init_db
-from app.deps import SessionDep
-from app.routes import router
+from app.deps import SessionDep, get_embedder
 
 logging.basicConfig(level=logging.INFO)
 
@@ -14,6 +15,8 @@ logging.basicConfig(level=logging.INFO)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    # Load (and on first run, download) the embedding model now, not on the first request
+    await asyncio.to_thread(get_embedder)
     yield
     await engine.dispose()
 
@@ -24,7 +27,8 @@ app = FastAPI(
     description="Chat API with streaming, Postgres history, and token/latency tracking.",
     lifespan=lifespan,
 )
-app.include_router(router)
+app.include_router(chat.router)
+app.include_router(documents.router)
 
 
 @app.get("/health")

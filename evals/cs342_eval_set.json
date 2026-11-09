@@ -1,0 +1,166 @@
+{
+  "document": "cs342_handbook.pdf",
+  "notes": "evidence = short substrings that must appear in a retrieved chunk (compare after collapsing whitespace). A question is a hit when all its evidence strings are found in the top-k chunks. Unanswerable questions have no evidence; use their top scores to choose a threshold.",
+  "questions": [
+    {
+      "id": "q01",
+      "category": "factual",
+      "question": "Who is the instructor for CS 342?",
+      "expected_answer": "Dr. Imani Okafor.",
+      "expected_pages": [1],
+      "evidence": ["Dr. Imani Okafor"]
+    },
+    {
+      "id": "q02",
+      "category": "factual",
+      "question": "How much of the final grade is the midterm exam worth?",
+      "expected_answer": "20%.",
+      "expected_pages": [3],
+      "evidence": ["Midterm exam 20%"]
+    },
+    {
+      "id": "q03",
+      "category": "factual",
+      "question": "When is Assignment 3 due?",
+      "expected_answer": "Friday, March 26, 2027 at 23:59, submitted through Gradeport.",
+      "expected_pages": [6],
+      "evidence": ["Assignment 3: Model evaluation and tuning"]
+    },
+    {
+      "id": "q04",
+      "category": "factual",
+      "question": "What is the maximum length of the final project report?",
+      "expected_answer": "8 pages.",
+      "expected_pages": [8],
+      "evidence": ["maximum 8 pages"]
+    },
+    {
+      "id": "q05",
+      "category": "paraphrase",
+      "question": "Can I miss a couple of the in-class quizzes without it hurting my grade?",
+      "expected_answer": "Yes. Only the best 8 of the 10 quizzes count, so missing up to two has no effect.",
+      "expected_pages": [3],
+      "evidence": ["best 8"]
+    },
+    {
+      "id": "q06",
+      "category": "paraphrase",
+      "question": "What happens if I hand in homework late after I've used up all my free late days?",
+      "expected_answer": "15% of the assignment's marks are deducted per day late; more than 3 days late after grace days gets zero.",
+      "expected_pages": [7],
+      "evidence": ["15% of the assignment's marks"]
+    },
+    {
+      "id": "q07",
+      "category": "paraphrase",
+      "question": "Am I allowed to use ChatGPT for my assignments?",
+      "expected_answer": "Only to explain concepts and help debug, not to generate complete solutions. Every submission needs an AI usage statement, and AI tools are banned in the midterm.",
+      "expected_pages": [9],
+      "evidence": ["AI assistants such as chatbots and code assistants may be used"]
+    },
+    {
+      "id": "q08",
+      "category": "paraphrase",
+      "question": "Do I need to buy a book for this class?",
+      "expected_answer": "No. The course notes (Applied ML Notes) are free as a PDF on the course website.",
+      "expected_pages": [10],
+      "evidence": ["No textbook purchase is required"]
+    },
+    {
+      "id": "q09",
+      "category": "paraphrase",
+      "question": "What overall score do I need to get an A?",
+      "expected_answer": "85-100.",
+      "expected_pages": [3],
+      "evidence": ["A for 85-100"]
+    },
+    {
+      "id": "q10",
+      "category": "keyword",
+      "question": "What is Osprey?",
+      "expected_answer": "The department's computing cluster; each project team gets 40 GPU-hours on it.",
+      "expected_pages": [8],
+      "evidence": ["Osprey"]
+    },
+    {
+      "id": "q11",
+      "category": "keyword",
+      "question": "What is CodeEcho used for?",
+      "expected_answer": "It is the college's code similarity checker; all submissions are checked with it.",
+      "expected_pages": [9],
+      "evidence": ["CodeEcho"]
+    },
+    {
+      "id": "q12",
+      "category": "keyword",
+      "question": "What is Perch?",
+      "expected_answer": "The course discussion forum; staff aim to answer within 24 hours on weekdays.",
+      "expected_pages": [10],
+      "evidence": ["Perch"]
+    },
+    {
+      "id": "q13",
+      "category": "keyword",
+      "question": "What is in Room B-214?",
+      "expected_answer": "The instructor's office, in Halvorsen Hall.",
+      "expected_pages": [1],
+      "evidence": ["Room B-214, Halvorsen Hall"]
+    },
+    {
+      "id": "q14",
+      "category": "confusable",
+      "question": "When and where are the lab sections held?",
+      "expected_answer": "Fridays 13:00-15:00 in Room 1.12, Marlow Building, run by Rafael Mendes.",
+      "expected_pages": [10],
+      "evidence": ["Rafael Mendes runs the weekly lab sections"]
+    },
+    {
+      "id": "q15",
+      "category": "confusable",
+      "question": "When and where is the midterm exam?",
+      "expected_answer": "Wednesday, March 3, 2027, 10:10-11:40 in Room 3.07, Marlow Building.",
+      "expected_pages": [5],
+      "evidence": ["Midterm exam on Wednesday, March 3"]
+    },
+    {
+      "id": "q16",
+      "category": "multi_hop",
+      "question": "I think there's a mistake in my grade. Who do I contact and how long do I have?",
+      "expected_answer": "Priya Natarajan, through the discussion forum; a re-mark must be requested within 10 days of the grade being published.",
+      "expected_pages": [3, 10],
+      "evidence": ["re-mark within 10 days", "Priya Natarajan manages Gradeport"]
+    },
+    {
+      "id": "q17",
+      "category": "multi_hop",
+      "question": "Which topics will be on the midterm exam?",
+      "expected_answer": "Weeks 1-7: ML workflow and tooling, linear regression and gradient descent, logistic regression and classification metrics, regularization and model selection, decision trees and random forests, SVMs and kernels, clustering and PCA.",
+      "expected_pages": [4, 5],
+      "evidence": ["covers the material from weeks 1 to 7", "Week 7 (February 22): Clustering"]
+    },
+    {
+      "id": "q18",
+      "category": "multi_hop",
+      "question": "How many days after the last lecture is the poster session?",
+      "expected_answer": "7 days: the final lecture is Wednesday, April 21 and the poster session is Wednesday, April 28.",
+      "expected_pages": [5, 8],
+      "evidence": ["final lecture is on Wednesday, April 21", "Poster session: Wednesday, April 28"]
+    },
+    {
+      "id": "q19",
+      "category": "unanswerable",
+      "question": "What is the parking policy on campus?",
+      "expected_answer": "Not in the handbook.",
+      "expected_pages": [],
+      "evidence": []
+    },
+    {
+      "id": "q20",
+      "category": "unanswerable",
+      "question": "Is attendance mandatory at the Friday lab sections?",
+      "expected_answer": "Not in the handbook (it says when labs run, but nothing about attendance rules).",
+      "expected_pages": [],
+      "evidence": []
+    }
+  ]
+}

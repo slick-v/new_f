@@ -11,7 +11,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import Settings, get_settings
 from app.database import get_session
 from app.llm import LLMService
-from app.repository import ChatRepository
+from app.repositories.chat import ChatRepository
+
+from app.rag.embeddings import EmbeddingService
+from app.rag.ingest import IngestService
+from app.rag.retriever import Retriever
+from app.repositories.documents import DocumentRepository
+
+
+
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -29,6 +37,34 @@ def get_llm() -> LLMService:
 RepoDep = Annotated[ChatRepository, Depends(get_repository)]
 LLMDep = Annotated[LLMService, Depends(get_llm)]
 
+
+@lru_cache
+def get_embedder() -> EmbeddingService:
+    settings = get_settings()
+    return EmbeddingService(settings.embedding_model, settings.embedding_dim)
+
+
+EmbedderDep = Annotated[EmbeddingService, Depends(get_embedder)]
+
+def get_document_repository(session: SessionDep) -> DocumentRepository:
+    return DocumentRepository(session)
+
+
+DocumentRepoDep = Annotated[DocumentRepository, Depends(get_document_repository)]
+
+
+def get_ingest_service(
+    repo: DocumentRepoDep, embedder: EmbedderDep, settings: SettingsDep
+) -> IngestService:
+    return IngestService(repo, embedder, settings)
+
+
+def get_retriever(repo: DocumentRepoDep, embedder: EmbedderDep, settings: SettingsDep) -> Retriever:
+    return Retriever(repo, embedder, settings.search_top_k)
+
+
+IngestDep = Annotated[IngestService, Depends(get_ingest_service)]
+RetrieverDep = Annotated[Retriever, Depends(get_retriever)]
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
